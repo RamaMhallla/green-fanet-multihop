@@ -1,0 +1,24 @@
+
+# Experiment evidence: keep locally
+/results/
+*.pcap
+*.pcapng
+
+# Runtime state
+/config/runtime_state*.json
+/config/*.lock
+
+# Python temporary files and environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local secrets and logs
+.env
+.env.*
+!.env.example
+*.log
+
+# Local archives
+*.zip
