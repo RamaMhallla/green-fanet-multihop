@@ -208,7 +208,7 @@ Lower is better. The score has no unit.
   - Supporting points: Wi-Fi links between UAVs (C4) support our Wi-Fi radio energy reference [6];
     a weighted metric with coefficients that sum to 1 (C8) has the same structure as our route score;
     MOS, delay, loss and throughput (C13) are useful metrics for our future QoS evaluation.
-- **Where we use it:** Part 3 (20% rule) and Part 13 (recruiting design and meeting question 5).
+- **Where we use it:** Part 3 (20% rule) and Part 13 (recruiting design).
 - **Difference:**
   - The paper uses **ant colony optimization**, distributed in every UAV (C11). We could investigate
     **GWO** as another search method, with a central SDN controller. We have not implemented or compared
