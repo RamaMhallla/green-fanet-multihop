@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Green-Aware FANET Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout concept: a field-operations log. A wide scene on top, then one narrow reading column
+   with full-width instrument panels (simulator, decision map) that break out of it. */
+:root{
+  --bg:#f2f5f8; --surface:#ffffff; --surface-2:#e8eef4; --ink:#13233a; --muted:#56677c; --line:#d3dce6;
+  --voice:#2463d1; --video:#dc6f17; --ok:#1d7f55; --warn:#a8750c; --bad:#bf3b28; --accent:#13233a;
+  --sky-top:#a9cbe8; --sky-mid:#d7e6f1; --sky-bot:#eef1ee; --hill:#b9c7cf; --hill-2:#97a9b3; --ground:#7b8a78; --ground-2:#5f6e5d;
+  --link:#9aaabb; --drone:#2b3a4e; --rotor:rgba(30,45,65,.18);
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1520; --surface:#142030; --surface-2:#1a293b; --ink:#e4ecf5; --muted:#93a5ba; --line:#2a3a4e;
+  --voice:#6fa2ff; --video:#ff9b4d; --ok:#4cc58e; --warn:#e6b450; --bad:#ff7a64; --accent:#e4ecf5;
+  --sky-top:#08142a; --sky-mid:#1a2d48; --sky-bot:#34465c; --hill:#1d2c3d; --hill-2:#16222f; --ground:#232f27; --ground-2:#1a241d;
+  --link:#4e6278; --drone:#cfd9e6; --rotor:rgba(210,225,240,.18);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1520; --surface:#142030; --surface-2:#1a293b; --ink:#e4ecf5; --muted:#93a5ba; --line:#2a3a4e;
+  --voice:#6fa2ff; --video:#ff9b4d; --ok:#4cc58e; --warn:#e6b450; --bad:#ff7a64; --accent:#e4ecf5;
+  --sky-top:#08142a; --sky-mid:#1a2d48; --sky-bot:#34465c; --hill:#1d2c3d; --hill-2:#16222f; --ground:#232f27; --ground-2:#1a241d;
+  --link:#4e6278; --drone:#cfd9e6; --rotor:rgba(210,225,240,.18);
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1080px;margin:0 auto}
+.col{max-width:720px}
+h1,h2,h3{font-family:var(--f-display);line-height:1.08;text-wrap:balance;margin:0;letter-spacing:.005em}
+h1{font-size:clamp(2.3rem,6vw,3.9rem);font-weight:700}
+h2{font-size:clamp(1.7rem,3.6vw,2.3rem);font-weight:600}
+h3{font-size:1.3rem;font-weight:600}
+p{margin:0}
+.eyebrow{font-family:var(--f-mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lead{font-size:1.14rem;color:var(--ink)}
+.muted{color:var(--muted)}
+.small{font-size:.9rem}
+code,.mono{font-family:var(--f-mono);font-size:.86em}
+.num{font-variant-numeric:tabular-nums}
+a{color:var(--voice)}
+:focus-visible{outline:2px solid var(--voice);outline-offset:2px}
+
+/* header */
+header.top{padding-block:28px 18px;display:grid;gap:14px}
+.metaRow{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.mode{display:inline-flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:.74rem;padding:4px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.mode i{width:8px;height:8px;border-radius:50%;background:var(--warn);display:inline-block}
+.mode.live i{background:var(--ok)}
+.sub{font-family:var(--f-display);font-size:clamp(1.25rem,2.6vw,1.6rem);font-weight:500;color:var(--muted)}
+
+/* scene */
+.scene{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--sky-mid)}
+.scene canvas{display:block;width:100%;height:clamp(300px,46vw,470px)}
+.caption{background:var(--surface);border-top:1px solid var(--line);padding:10px 14px;min-height:3.4em;display:flex;align-items:center}
+.caption .msg{font-size:.95rem}
+.caption .msg b{font-weight:700}
+.figcap{font-size:.84rem;color:var(--muted);margin-top:8px}
+.scene .ctl{position:absolute;top:10px;right:10px}
+.iconBtn{font:600 .8rem var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer}
+.iconBtn:hover{border-color:var(--muted)}
+
+section{padding-block:46px 8px;display:grid;gap:18px}
+section > .head{display:grid;gap:8px}
+.kicker{font-family:var(--f-mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--video)}
+
+/* keys */
+.key{display:inline-flex;align-items:center;gap:6px;font-size:.9rem;margin-right:14px;white-space:nowrap}
+.sw{width:22px;height:4px;border-radius:2px;display:inline-block}
+.sw.v{background:var(--voice)} .sw.d{background:var(--video)} .sw.l{background:var(--link);height:2px}
+
+/* lab strip */
+.lab{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.lab > div{padding:14px 16px;border-right:1px solid var(--line);min-width:0}
+.lab > div:last-child{border-right:0}
+.lab b{display:block;font-family:var(--f-display);font-size:1.18rem;font-weight:600}
+.lab span{font-size:.9rem;color:var(--muted)}
+@media (max-width:760px){.lab{grid-template-columns:1fr 1fr}.lab > div:nth-child(2){border-right:0}.lab > div:nth-child(-n+2){border-bottom:1px solid var(--line)}}
+
+/* choices */
+.choices{width:100%;border-collapse:collapse;font-size:.95rem}
+.choices th,.choices td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.choices th{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.tableBox{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.eq{font-family:var(--f-mono);font-size:.92rem;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--ink);border-radius:6px;padding:12px 14px;overflow-x:auto;white-space:nowrap}
+
+/* simulator */
+.sim{border:1px solid var(--line);border-radius:14px;background:var(--surface);display:grid;grid-template-columns:minmax(0,1fr) 300px}
+.sim .stage{padding:12px;min-width:0;border-right:1px solid var(--line)}
+.sim svg{width:100%;height:auto;display:block}
+.sim .side{padding:16px;display:grid;gap:14px;align-content:start;min-width:0}
+@media (max-width:860px){.sim{grid-template-columns:1fr}.sim .stage{border-right:0;border-bottom:1px solid var(--line)}}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{font:600 .86rem var(--f-body);padding:7px 11px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);cursor:pointer;text-align:left}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.seg.col button{width:100%}
+.lbl{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:block}
+.batt{display:flex;align-items:center;gap:10px}
+.batt input{flex:1;min-width:0;accent-color:var(--video);direction:rtl}
+.batt output{font:600 1.05rem var(--f-mono);min-width:3.6em;text-align:right}
+.play{font:600 .86rem var(--f-body);padding:7px 12px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+.routes{display:grid;gap:8px;font-size:.92rem}
+.routes div{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;align-items:baseline}
+.routes .t{font-family:var(--f-mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
+.routes .t.v{color:var(--voice)} .routes .t.d{color:var(--video)}
+.explain{font-size:.93rem;border-top:1px solid var(--line);padding-top:12px}
+.evid{font-family:var(--f-mono);font-size:.72rem;color:var(--muted)}
+.simfoot{font-size:.84rem;color:var(--muted);padding:10px 14px;border-top:1px solid var(--line);grid-column:1/-1}
+.n-label{font:600 13px var(--f-display);fill:var(--ink)}
+.n-sub{font:500 11px var(--f-mono);fill:var(--muted)}
+@media (max-width:560px){.n-label{font-size:30px}.n-sub{display:none}}
+
+/* results */
+.results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:820px){.results{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:grid;gap:12px;align-content:start;min-width:0}
+.card.wide{grid-column:1/-1}
+.card .tag{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chip{font:600 .68rem var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:5px;border:1px solid currentColor;white-space:nowrap}
+.chip.done{color:var(--bg);background:var(--ink);border-color:var(--ink)}
+.chip.pilot{color:var(--ink)}
+.chip.planned,.chip.proposed{color:var(--muted)}
+.chip.notyet{color:var(--bad)}
+.big{font-family:var(--f-display);font-size:2.4rem;font-weight:700;line-height:1}
+.dl{display:grid;gap:4px;font-size:.93rem}
+.dl b{font-weight:700}
+.bars{display:grid;gap:10px}
+.bar{display:grid;grid-template-columns:96px minmax(0,1fr) 92px;gap:10px;align-items:center;font-size:.9rem}
+.bar .track{height:14px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+.bar .fill{height:100%;background:var(--voice)}
+.bar .val{font-family:var(--f-mono);font-size:.82rem;text-align:right}
+table.data{width:100%;border-collapse:collapse;font-size:.9rem;font-variant-numeric:tabular-nums}
+table.data th,table.data td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left}
+table.data th{font:600 .7rem var(--f-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+table.data td.r,table.data th.r{text-align:right}
+.note{font-size:.88rem;color:var(--muted);border-left:2px solid var(--line);padding-left:10px}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{font-family:var(--f-mono);font-size:11px;fill:var(--muted)}
+.chart .lab2{font-family:var(--f-body);font-size:12.5px;fill:var(--ink)}
+
+/* status */
+.status{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 28px}
+@media (max-width:760px){.status{grid-template-columns:1fr}}
+.status div{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:.94rem}
+.status div span:first-child{min-width:0}
+
+footer{padding-block:48px 40px;color:var(--muted);font-size:.88rem;display:grid;gap:8px;border-top:1px solid var(--line);margin-top:48px}
+
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="top">
+  <div class="metaRow">
+    <span class="eyebrow">Smart and Programmable Networks · University of Calabria</span>
+    <span class="mode" id="mode"><i></i><span id="modeText">Static snapshot · 25 Oct 2026</span></span>
+  </div>
+  <h1>Green-Aware SDN Relay Control</h1>
+  <p class="sub">for a 5G-assisted flying ad-hoc network</p>
+  <p class="lead col">A rescue team sends <b style="color:var(--voice)">voice</b> and <b style="color:var(--video)">video</b> to a ground station through four relay drones. An SDN controller picks the relays from each drone's battery, delay and a carbon factor, and moves the traffic away from a weak drone <em>before</em> it fails.</p>
+</header>
+
+<figure style="margin:0">
+  <div class="scene">
+    <canvas id="hero" aria-label="Animated rescue scene: four drones relay voice and video from a rescue team to a ground station. When drone UAV1's battery falls below 20 percent, both flows move to UAV2 and UAV3."></canvas>
+    <div class="ctl"><button class="iconBtn" id="heroToggle" type="button">Pause</button></div>
+    <div class="caption"><div class="msg" id="heroMsg"><b>UAV1 90%.</b> Voice goes UAV1 → UAV3. Video goes UAV2 → UAV4.</div></div>
+  </div>
+  <figcaption class="figcap">Illustration of the use case (scenario A). Our testbed has no real drones: the UAVs are Docker containers that relay traffic in one Ubuntu VM.</figcaption>
+</figure>
+
+<section aria-labelledby="h-sim">
+  <div class="head col">
+    <span class="kicker">Interactive</span>
+    <h2 id="h-sim">Watch the flows move</h2>
+    <p>Pick a scenario and a planner, then lower UAV1's battery or press play. The routes come from the planner's offline decision map, with the other batteries fixed at 50 / 80 / 60%.</p>
+  </div>
+  <div class="sim">
+    <div class="stage">
+      <svg id="simSvg" viewBox="0 0 800 380" role="img" aria-label="Network map with u1, four UAVs and the ground station, showing the current voice and video routes"></svg>
+      <div style="padding:2px 6px 0"><span class="key"><span class="sw v"></span>voice</span><span class="key"><span class="sw d"></span>video</span><span class="key"><span class="sw l"></span>allowed link</span></div>
+    </div>
+    <div class="side">
+      <div><span class="lbl">Scenario</span><div class="seg" id="scnSeg"></div></div>
+      <div><span class="lbl">Planner</span><div class="seg col" id="plSeg"></div></div>
+      <div>
+        <label class="lbl" for="batt">UAV1 battery</label>
+        <div class="batt"><input type="range" id="batt" min="0" max="90" step="1" value="90"><output id="battOut" class="num">90%</output></div>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center"><button class="play" id="playBtn" type="button">Play discharge</button><span class="evid" id="stateTag"></span></div>
+      </div>
+      <div class="routes" id="routes"></div>
+      <p class="explain" id="explain"></p>
+      <p class="evid" id="evidence"></p>
+    </div>
+    <p class="simfoot">The animation shows planner decisions, not measured packets. Scenario B adds one link, u1–UAV3. The tested-with-traffic results are below.</p>
+  </div>
+</section>
+
+<section aria-labelledby="h-res">
+  <div class="head col">
+    <span class="kicker">Results</span>
+    <h2 id="h-res">What we measured</h2>
+    <p>Small emulation experiments. We keep failed and inconclusive runs, and each card says what the result does and does not show.</p>
+  </div>
+  <div class="results">
+
+    <article class="card">
+      <div class="tag"><span class="chip pilot">Done · pilot</span><span class="evid">Scenario A · real UDP · 3 + 3 runs</span></div>
+      <h3>Voice survives the drone failure</h3>
+      <p class="small">Battery warning at +8 s, UAV1 down at +20 s. Voice packets sent 2–6 s after the failure:</p>
+      <div class="bars">
+        <div class="bar"><span>Frozen</span><span class="track"><span class="fill" style="width:0%"></span></span><span class="val">0 / 1493</span></div>
+        <div class="bar"><span>Protection</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="val">1500 / 1500</span></div>
+      </div>
+      <p class="note">The price is about 14% less video: the policy limits video to 3.6 Mbit/s, and some packets were also dropped in UAV queues.</p>
+    </article>
+
+    <article class="card">
+      <div class="tag"><span class="chip done">Done</span><span class="evid">3 probe packets per flow, after UAV1 is down</span></div>
+      <h3>The frozen plan always loses the flow on UAV1</h3>
+      <div style="overflow-x:auto">
+      <table class="data">
+        <thead><tr><th></th><th>Frozen</th><th>Protection</th></tr></thead>
+        <tbody>
+          <tr><td>Scenario A</td><td>voice <b>0/3</b>, video 3/3</td><td>voice <b>3/3</b>, video 3/3 reduced</td></tr>
+          <tr><td>Scenario B</td><td>voice 3/3, video <b>0/3</b></td><td>voice 3/3, video <b>3/3</b> full</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="note">Probes show the route works. They do not measure quality at 4.2 Mbit/s.</p>
+    </article>
+
+    <article class="card wide">
+      <div class="tag"><span class="chip done">Done</span><span class="evid">Offline · 2184 rows · 1440 checks passed · UAV1 90% → 0% in 1% steps</span></div>
+      <h3>Decision map: when does each planner move the traffic?</h3>
+      <div class="chart" style="overflow-x:auto"><svg id="mapSvg" viewBox="0 0 860 330" style="min-width:620px" role="img" aria-label="Decision map from 30 to 15 percent battery for each planner"></svg></div>
+      <p class="small">In <b>B</b>, adaptive weights move video off UAV1 at 26% and keep it full; fixed weights wait until UAV1 is removed at 19%. In <b>A</b>, greedy adaptive makes the wrong move at 25%, greedy + guard reduces video too early, and joint + guard keeps both flows full until 19%.</p>
+      <p class="note">Moving earlier is not automatically better, and it is not proof of saving energy.</p>
+    </article>
+
+    <article class="card wide">
+      <div class="tag"><span class="chip pilot">Done · pilot</span><span class="evid">zoneB01 · scenario B · real traffic · model-based battery feedback</span></div>
+      <h3>Latest run: adaptive weights move video at 25.776%</h3>
+      <p class="small">Both arms: joint planner, 30% zone guard, UAV1 starts at 28%. All batteries drain from the energy model and the measured interface counters. No scheduled jumps, no failure.</p>
+      <div class="chart"><svg id="zoneSvg" viewBox="0 0 860 170" role="img" aria-label="UAV1 battery from 28 to 23 percent: fixed keeps video on UAV1, adaptive switches to UAV2 at 25.776 percent"></svg></div>
+      <div style="overflow-x:auto">
+      <table class="data">
+        <thead><tr><th>Observation</th><th class="r">Fixed weights</th><th class="r">Adaptive weights</th></tr></thead>
+        <tbody>
+          <tr><td>Confirmed battery updates</td><td class="r">9</td><td class="r">9</td></tr>
+          <tr><td>Route changes</td><td class="r">0</td><td class="r">1</td></tr>
+          <tr><td>Voice IDs source / GS</td><td class="r">5000 / 5000</td><td class="r">5000 / 5000</td></tr>
+          <tr><td>Video IDs source / GS</td><td class="r">17500 / 17230</td><td class="r">17500 / 16818</td></tr>
+          <tr><td>Video IDs missing at GS</td><td class="r"><b>270</b></td><td class="r"><b>682</b></td></tr>
+          <tr><td>UAV1 final battery</td><td class="r">23.446%</td><td class="r">23.352%</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="note">The adaptive arm had more missing video packets: 556 of the 682 were sent before the new battery state was published. The traffic sender was irregular in both arms (source check failed), so this pair does not show a quality benefit.</p>
+    </article>
+
+    <article class="card">
+      <div class="tag"><span class="chip pilot">Done · pilot</span><span class="evid">Scenario A · voice queue 128 packets</span></div>
+      <h3>A bigger voice queue removed voice drops</h3>
+      <div class="dl">
+        <span><b>5000 / 5000</b> voice IDs in each of three event runs, zero voice queue drops.</span>
+        <span>p99 delay <span class="mono">118.9 · 76.2 · 182.3 ms</span>. Timing is still above the 100 ms voice budget in two runs.</span>
+      </div>
+      <p class="note">Video still lost packets in the queues. One run was inconclusive (sender reported 40.19 s instead of 40 s).</p>
+    </article>
+
+    <article class="card">
+      <div class="tag"><span class="chip done">Done</span><span class="evid">Estimated model · DJI M100 hover + Intel 5300 radio</span></div>
+      <h3>Hovering dominates the energy budget</h3>
+      <div style="display:flex;gap:22px;flex-wrap:wrap;align-items:baseline">
+        <div><div class="big num">318.149 W</div><span class="small muted">every UAV, hover + radio idle</span></div>
+        <div><div class="big num" style="color:var(--video)">+0.0375 W</div><span class="small muted">to relay 4.2 Mbit/s video</span></div>
+      </div>
+      <p class="note">Relaying is about 0.01% of the total in this model. Energy is estimated, not measured, and no longer flight time is shown yet.</p>
+    </article>
+
+  </div>
+</section>
+
+<footer>
+  <span><b style="color:var(--ink)">Rama Mhalla and Aurelio Benvenuto</b> · MSc Telecommunication Engineering, DIMES, University of Calabria</span>
+</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let C = {};
+function readColors(){ ['--sky-top','--sky-mid','--sky-bot','--hill','--hill-2','--ground','--ground-2','--link','--drone','--rotor','--voice','--video','--ok','--warn','--bad','--ink','--muted','--surface','--line','--bg'].forEach(k=>C[k]=css(k)); }
+readColors();
+if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{readColors(); drawStatic();});
+new MutationObserver(()=>{readColors(); drawStatic();}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+/* ============ ROUTE LOGIC (from the report's decision map) ============ */
+const VO='voice', VI='video';
+function plan(scn, pl, b){
+  // returns {voice:{path,lost}, video:{path,profile,lost}, note, evid, state}
+  const down = b<=0, excl = b<20;
+  let v, d, prof='full', note='', evid='Offline decision map (Result 4).';
+  if (scn==='A'){
+    const v0=['u1','UAV1','UAV3','GS'], d0=['u1','UAV2','UAV4','GS'], both=['u1','UAV2','UAV3','GS'];
+    if (pl==='frozen'){ v=v0; d=d0;
+      note = down ? 'UAV1 is down. The frozen plan never moved voice, so voice is lost. Video continues on UAV2 → UAV4.'
+           : b<30 ? 'The frozen plan ignores the battery. Voice stays on the weak UAV1.'
+           : 'Start routes. The frozen plan will never change them.';
+      evid = 'Tested with traffic: 0 of 1493 voice packets after the failure (Result 1).';
+    } else if (pl==='joint'){
+      if (excl){ v=both; d=both; prof='reduced';
+        note = (down?'UAV1 is down, but no flow uses it. ':'Below 20%: UAV1 is excluded. ')+'Both flows share UAV2 → UAV3. They do not both fit at full rate, so video is reduced to 3.6 Mbit/s.';
+        evid='Tested with traffic: 1500 of 1500 voice packets after the failure (Result 1).';
+      } else { v=v0; d=d0;
+        note = b<=25 ? 'UAV1 is weak but still allowed. Joint + guard keeps the plan: UAV1 carries only 1.3 Mbit/s and both flows stay full.' : 'Start routes. Voice on the cheapest route via UAV1.';
+      }
+    } else if (pl==='greedy'){
+      if (excl){ v=both; d=both; prof='reduced'; note=(down?'UAV1 is down. ':'Below 20%: UAV1 is excluded. ')+'Both flows on UAV2 → UAV3, video reduced.'; }
+      else if (b<=25){ v=both; d=['u1','UAV1','UAV4','GS']; note='Wrong direction: voice leaves UAV1 first, full video no longer fits on UAV2, so video moves onto the weak UAV1. Its load goes 1.3 → 4.4 Mbit/s.'; }
+      else { v=v0; d=d0; note='Start routes.'; }
+    } else if (pl==='greedyguard'){
+      if (b<=25){ v=both; d=both; prof='reduced'; note=(down?'UAV1 is down, no flow uses it. ':'')+'The guard blocks more load on UAV1, so both flows go to UAV2 → UAV3 and video is reduced already at 25%. Too early.'; }
+      else { v=v0; d=d0; note='Start routes.'; }
+    }
+  } else {
+    const v0=['u1','UAV3','GS'], d0=['u1','UAV1','UAV4','GS'], d1=['u1','UAV2','UAV4','GS'];
+    v=v0;
+    if (pl==='frozen'){ d=d0;
+      note = down ? 'UAV1 is down. Video was still on UAV1, so video is lost. Voice continues on the direct link to UAV3.'
+           : b<30 ? 'The frozen plan keeps the heavy video flow on the weak UAV1.' : 'Start routes: voice direct to UAV3, video via UAV1 → UAV4.';
+      evid='Probe check: video 0/3 after the failure (Result 2).';
+    } else if (pl==='fixed'){
+      if (excl){ d=d1; note=(down?'UAV1 is down, no flow uses it. ':'Below 20%: UAV1 is excluded. ')+'Video moves to UAV2 → UAV4 and keeps its full profile.'; }
+      else { d=d0; note= b<=26 ? 'Fixed weights: the battery term is not strong enough yet. Video stays on UAV1 until it is excluded.' : 'Start routes.'; }
+      evid='Same answer for greedy, greedy + guard and joint + guard (Result 4).';
+    } else { // adaptive
+      if (b<=26){ d=d1; note=(down?'UAV1 is down. Nothing uses it; ':'At 26% the battery weight wins: ')+'video runs on UAV2 → UAV4 with its full profile.'; evid= b<=26 && b>=23 ? 'With traffic and battery feedback the switch happened at 25.776% (zoneB01).' : 'Probe check: video 3/3, full profile (Result 2).'; }
+      else { d=d0; note='Start routes. Adaptive weights still trust UAV1 here.'; }
+    }
+  }
+  const lostV = down && v.includes('UAV1'), lostD = down && d.includes('UAV1');
+  return {voice:{path:v,lost:lostV}, video:{path:d,profile:prof,lost:lostD}, note, evid, down, excl};
+}
+
+/* ============ HERO SCENE (canvas) ============ */
+const hero = document.getElementById('hero'), hctx = hero.getContext('2d');
+const heroMsg = document.getElementById('heroMsg'), heroToggle=document.getElementById('heroToggle');
+let HW=0, HH=0, heroRun=!reduce, heroT=0, lastTs=0;
+const LOOP=20;
+function sizeHero(){
+  const r = hero.getBoundingClientRect(), dpr=Math.min(2,window.devicePixelRatio||1);
+  HW=r.width; HH=r.height; hero.width=Math.round(HW*dpr); hero.height=Math.round(HH*dpr);
+  hctx.setTransform(dpr,0,0,dpr,0,0);
+}
+function hpos(){
+  const g=HH*0.80, narrow = HW<560;
+  return {
+    ground:g,
+    u1:{x:HW*(narrow?0.13:0.085), y:g-HH*0.13},
+    GS:{x:HW*(narrow?0.88:0.915), y:g-HH*0.20},
+    UAV1:{x:HW*0.33,y:HH*0.20}, UAV2:{x:HW*0.37,y:HH*0.47},
+    UAV3:{x:HW*0.63,y:HH*0.22}, UAV4:{x:HW*0.67,y:HH*0.49}
+  };
+}
+function heroBattery(t){ // seconds in loop -> battery
+  if (t<14) return 90 - (t/14)*82;      // 90 -> 8
+  if (t<15.5) return 8;
+  return 0;
+}
+let hPackets=[], hSpawnV=0, hSpawnD=0;
+function bobble(name,t){ const s={UAV1:0,UAV2:1.7,UAV3:3.1,UAV4:4.4}[name]||0; return Math.sin(t*1.6+s)*4; }
+function nodeXY(P,name,t){ const p=P[name]; if (name.startsWith('UAV')) return {x:p.x,y:p.y+bobble(name,t)}; return p; }
+function lerpPath(P,path,u,t){
+  const n=path.length-1, seg=Math.min(n-1,Math.floor(u*n)), f=u*n-seg;
+  const a=nodeXY(P,path[seg],t), b=nodeXY(P,path[seg+1],t);
+  return {x:a.x+(b.x-a.x)*f, y:a.y+(b.y-a.y)*f, seg, f};
+}
+function drawSky(P){
+  const g=hctx.createLinearGradient(0,0,0,P.ground);
+  g.addColorStop(0,C['--sky-top']); g.addColorStop(.65,C['--sky-mid']); g.addColorStop(1,C['--sky-bot']);
+  hctx.fillStyle=g; hctx.fillRect(0,0,HW,HH);
+  // far hills
+  hctx.fillStyle=C['--hill'];
+  hctx.beginPath(); hctx.moveTo(0,P.ground);
+  for(let x=0;x<=HW;x+=HW/12){ hctx.lineTo(x, P.ground-HH*0.10-Math.sin(x/HW*7.3+1)*HH*0.045-Math.sin(x/HW*17)*HH*0.015); }
+  hctx.lineTo(HW,P.ground); hctx.fill();
+  hctx.fillStyle=C['--hill-2'];
+  hctx.beginPath(); hctx.moveTo(0,P.ground);
+  for(let x=0;x<=HW;x+=HW/18){ hctx.lineTo(x, P.ground-HH*0.05-Math.sin(x/HW*11+2)*HH*0.025); }
+  hctx.lineTo(HW,P.ground); hctx.fill();
+}
+function drawGround(P,t){
+  hctx.fillStyle=C['--ground']; hctx.fillRect(0,P.ground,HW,HH-P.ground);
+  hctx.fillStyle=C['--ground-2']; hctx.fillRect(0,P.ground,HW,3);
+  // collapsed building (left background)
+  const bx=HW*0.19, bw=HW*0.11, bh=HH*0.20;
+  hctx.fillStyle=C['--hill-2'];
+  hctx.beginPath(); hctx.moveTo(bx,P.ground); hctx.lineTo(bx,P.ground-bh*0.85); hctx.lineTo(bx+bw*0.35,P.ground-bh); hctx.lineTo(bx+bw*0.55,P.ground-bh*0.55);
+  hctx.lineTo(bx+bw*0.8,P.ground-bh*0.62); hctx.lineTo(bx+bw,P.ground-bh*0.25); hctx.lineTo(bx+bw*1.15,P.ground); hctx.closePath(); hctx.fill();
+  // rubble
+  hctx.fillStyle=C['--ground-2'];
+  for(let i=0;i<9;i++){ const rx=bx+bw*0.2+i*bw*0.11, rs=4+((i*37)%7); hctx.fillRect(rx,P.ground-rs*0.6,rs*1.6,rs*0.6+1); }
+  // smoke from building
+  for(let i=0;i<4;i++){
+    const k=((t*0.18+i/4)%1), sx=bx+bw*0.45+Math.sin(k*5+i)*10, sy=P.ground-bh-k*HH*0.22, r=8+k*22;
+    hctx.fillStyle=`rgba(140,150,160,${0.22*(1-k)})`; hctx.beginPath(); hctx.arc(sx,sy,r,0,7); hctx.fill();
+  }
+}
+function person(x,y,s,vest,helmet,radio,phase){
+  hctx.save(); hctx.translate(x,y);
+  hctx.fillStyle=C['--drone'];
+  hctx.fillRect(-3*s,-9*s,2.2*s,9*s); hctx.fillRect(0.8*s,-9*s,2.2*s,9*s); // legs
+  hctx.fillStyle=vest; hctx.beginPath(); hctx.roundRect(-4.5*s,-20*s,9*s,12*s,2*s); hctx.fill(); // vest
+  hctx.fillStyle='rgba(255,255,255,.75)'; hctx.fillRect(-4.5*s,-14.5*s,9*s,1.4*s); // reflective strip
+  hctx.fillStyle='#d9b38c'; hctx.beginPath(); hctx.arc(0,-23*s,3.2*s,0,7); hctx.fill(); // head
+  hctx.fillStyle=helmet; hctx.beginPath(); hctx.arc(0,-24*s,3.6*s,Math.PI,0); hctx.fill(); hctx.fillRect(-4.4*s,-24.3*s,8.8*s,1.2*s);
+  if (radio){ hctx.strokeStyle=C['--drone']; hctx.lineWidth=1.4; hctx.beginPath(); hctx.moveTo(4*s,-18*s); hctx.lineTo(6.5*s,-27*s); hctx.stroke();
+    hctx.fillStyle=C['--drone']; hctx.fillRect(3.2*s,-19*s,2.6*s,4*s); }
+  hctx.restore();
+}
+function drawTeam(P,t){
+  const s=Math.max(1.05,Math.min(1.7,HW/560)), x=P.u1.x, g=P.ground;
+  person(x-18*s,g,s,'#e2611f','#f2c230',false); person(x,g,s,'#e2611f','#f2c230',true); person(x+16*s,g,s,'#e2611f','#ffffff',false);
+  // stretcher
+  hctx.fillStyle=C['--drone']; hctx.fillRect(x-30*s,g-6*s,20*s,2*s);
+  // radio pulses
+  const ax=x+6.5*s, ay=g-27*s;
+  for(let i=0;i<2;i++){ const k=((t*0.9+i*0.5)%1); hctx.strokeStyle=`rgba(255,255,255,${0.55*(1-k)})`; hctx.lineWidth=1.5; hctx.beginPath(); hctx.arc(ax,ay,4+k*18,-2.4,-0.7); hctx.stroke(); }
+  P.u1.x=ax; P.u1.y=ay;
+  label(x, g+16, 'Rescue team (u1)');
+}
+function drawGS(P,t){
+  const s=Math.max(1,Math.min(1.6,HW/600)), x=P.GS.x, g=P.ground;
+  // van
+  hctx.fillStyle=C['--surface']; hctx.strokeStyle=C['--drone']; hctx.lineWidth=1.2;
+  hctx.beginPath(); hctx.roundRect(x-34*s,g-20*s,40*s,16*s,3*s); hctx.fill(); hctx.stroke();
+  hctx.beginPath(); hctx.roundRect(x+6*s,g-15*s,12*s,11*s,2*s); hctx.fill(); hctx.stroke();
+  hctx.fillStyle=C['--bad']; hctx.fillRect(x-28*s,g-15*s,8*s,2.5*s); hctx.fillRect(x-25.2*s,g-17.8*s,2.5*s,8*s);
+  hctx.fillStyle=C['--drone']; hctx.beginPath(); hctx.arc(x-24*s,g-3*s,3.2*s,0,7); hctx.arc(x+10*s,g-3*s,3.2*s,0,7); hctx.fill();
+  // mast
+  hctx.strokeStyle=C['--drone']; hctx.lineWidth=2; hctx.beginPath(); hctx.moveTo(x-6*s,g-20*s); hctx.lineTo(x-6*s,g-50*s); hctx.stroke();
+  hctx.beginPath(); hctx.arc(x-6*s,g-50*s,6*s,Math.PI*0.9,Math.PI*1.9); hctx.stroke();
+  const blink = (Math.sin(t*4)>0.2); hctx.fillStyle= blink? C['--bad'] : C['--drone']; hctx.beginPath(); hctx.arc(x-6*s,g-51*s,1.8*s,0,7); hctx.fill();
+  P.GS.x=x-6*s; P.GS.y=g-50*s;
+  label(x-8*s, g+16, 'Ground station (GS)');
+}
+function label(x,y,txt,col){
+  hctx.font='600 12px "Barlow Condensed", "Arial Narrow", sans-serif'; hctx.textAlign='center'; hctx.textBaseline='middle';
+  const w=hctx.measureText(txt).width+12;
+  x=Math.max(w/2+4,Math.min(HW-w/2-4,x));
+  hctx.fillStyle='rgba(0,0,0,.28)'; hctx.beginPath(); hctx.roundRect(x-w/2,y-9,w,18,5); hctx.fill();
+  hctx.fillStyle=col||'#ffffff'; hctx.fillText(txt,x,y+0.5);
+}
+function drone(x,y,name,batt,state,t){
+  const s=Math.max(0.85,Math.min(1.35,HW/760));
+  hctx.save(); hctx.translate(x,y);
+  if (state==='down'){ hctx.globalAlpha=.45; hctx.rotate(0.18); }
+  const arm=22*s;
+  hctx.strokeStyle=C['--drone']; hctx.lineWidth=2.4*s;
+  hctx.beginPath(); hctx.moveTo(-arm,-arm*0.45); hctx.lineTo(arm,arm*0.45); hctx.moveTo(arm,-arm*0.45); hctx.lineTo(-arm,arm*0.45); hctx.stroke();
+  const rot=[[-arm,-arm*0.45],[arm,-arm*0.45],[-arm,arm*0.45],[arm,arm*0.45]];
+  rot.forEach(([rx,ry],i)=>{
+    hctx.fillStyle=C['--drone']; hctx.fillRect(rx-1.5*s,ry-4*s,3*s,4*s);
+    hctx.fillStyle=C['--rotor']; hctx.beginPath(); hctx.ellipse(rx,ry-4*s,13*s,3*s,0,0,7); hctx.fill();
+    if (state!=='down'){ const a=(t*38+i)%(Math.PI); hctx.strokeStyle=C['--drone']; hctx.globalAlpha*=.7; hctx.lineWidth=1.4*s;
+      hctx.beginPath(); hctx.moveTo(rx-Math.cos(a)*12*s,ry-4*s-Math.sin(a)*2*s); hctx.lineTo(rx+Math.cos(a)*12*s,ry-4*s+Math.sin(a)*2*s); hctx.stroke(); hctx.globalAlpha/=.7; }
+  });
+  hctx.fillStyle=C['--drone']; hctx.beginPath(); hctx.roundRect(-11*s,-6*s,22*s,12*s,4*s); hctx.fill();
+  const led = state==='down' ? C['--muted'] : (batt<20 ? C['--bad'] : batt<30 ? C['--warn'] : C['--ok']);
+  if (state==='down' || Math.sin(t*5+name.length)>-0.3){ hctx.fillStyle=led; hctx.beginPath(); hctx.arc(0,0,2.4*s,0,7); hctx.fill(); }
+  hctx.restore();
+  // battery gauge
+  const bw=34*s, bx=x-bw/2, by=y+15*s;
+  hctx.fillStyle='rgba(0,0,0,.3)'; hctx.beginPath(); hctx.roundRect(bx-1,by-1,bw+2,7,2); hctx.fill();
+  hctx.fillStyle= batt<20 ? C['--bad'] : batt<30 ? C['--warn'] : C['--ok'];
+  hctx.fillRect(bx,by,bw*Math.max(0,batt)/100,5);
+  label(x, by+17*s, state==='down' ? name+' · down' : name+' · '+Math.round(batt)+'%');
+}
+function drawLinks(P,t){
+  const L=[['u1','UAV1'],['u1','UAV2'],['UAV1','UAV3'],['UAV1','UAV4'],['UAV2','UAV3'],['UAV2','UAV4'],['UAV3','GS'],['UAV4','GS']];
+  hctx.setLineDash([4,6]); hctx.strokeStyle=C['--link']; hctx.lineWidth=1.2; hctx.globalAlpha=.8;
+  L.forEach(([a,b])=>{const p=nodeXY(P,a,t),q=nodeXY(P,b,t); hctx.beginPath(); hctx.moveTo(p.x,p.y); hctx.lineTo(q.x,q.y); hctx.stroke();});
+  hctx.setLineDash([]); hctx.globalAlpha=1;
+}
+function drawRoute(P,path,col,w,t){
+  hctx.strokeStyle=col; hctx.lineWidth=w; hctx.globalAlpha=.55; hctx.lineCap='round';
+  hctx.beginPath(); path.forEach((n,i)=>{const p=nodeXY(P,n,t); i?hctx.lineTo(p.x,p.y):hctx.moveTo(p.x,p.y);}); hctx.stroke(); hctx.globalAlpha=1;
+}
+let lastPhase='';
+function heroFrame(dt){
+  const t=heroT, b=heroBattery(t);
+  const P=hpos();
+  drawSky(P); drawGround(P,t); drawTeam(P,t); drawGS(P,t);
+  const pl=plan('A','joint',Math.round(b));
+  drawLinks(P,t);
+  const reduced=pl.video.profile==='reduced';
+  drawRoute(P,pl.video.path,C['--video'],reduced?3:4.5,t);
+  drawRoute(P,pl.voice.path,C['--voice'],2.6,t);
+  // packets
+  if (dt>0){
+    hSpawnV+=dt; hSpawnD+=dt;
+    while(hSpawnV>0.16){hSpawnV-=0.16; hPackets.push({k:VO,path:pl.voice.path,u:0});}
+    const dGap= reduced?0.12:0.09;
+    while(hSpawnD>dGap){hSpawnD-=dGap; hPackets.push({k:VI,path:pl.video.path,u:0});}
+    hPackets.forEach(p=>p.u+=dt*0.30);
+    hPackets=hPackets.filter(p=>p.u<1);
+  }
+  hPackets.forEach(p=>{
+    const q=lerpPath(P,p.path,p.u,t);
+    hctx.fillStyle= p.k===VO?C['--voice']:C['--video'];
+    hctx.beginPath(); if(p.k===VO) hctx.arc(q.x,q.y,3,0,7); else hctx.roundRect(q.x-4,q.y-2.5,8,5,2); hctx.fill();
+  });
+  ['UAV1','UAV2','UAV3','UAV4'].forEach(n=>{
+    const p=nodeXY(P,n,t), bb = n==='UAV1'? b : ({UAV2:50,UAV3:80,UAV4:60})[n];
+    drone(p.x,p.y,n,bb, n==='UAV1'&&b<=0?'down':'ok',t);
+  });
+  // caption
+  let phase, msg;
+  if (b<=0){ phase='down'; msg='<b>UAV1 is down.</b> No flow uses it any more, so voice and video keep going.'; }
+  else if (b<20){ phase='move'; msg='<b>UAV1 '+Math.round(b)+'%.</b> Below 20%: the controller moves both flows to UAV2 → UAV3 before UAV1 fails. Video is limited to 3.6 Mbit/s.'; }
+  else if (b<=25){ phase='weak'; msg='<b>UAV1 '+Math.round(b)+'%.</b> Weak but allowed. The joint planner keeps both flows at full rate; the guard stops new load on UAV1.'; }
+  else { phase='ok'; msg='<b>UAV1 '+Math.round(b)+'%.</b> Voice goes UAV1 → UAV3. Video goes UAV2 → UAV4.'; }
+  if (phase!==lastPhase || phase!=='down') heroMsg.innerHTML=msg;
+  lastPhase=phase;
+}
+function heroLoop(ts){
+  const dt = lastTs? Math.min(0.05,(ts-lastTs)/1000):0; lastTs=ts;
+  if (heroRun){ heroT=(heroT+dt)%LOOP; if (heroT<dt){hPackets=[];} }
+  if (HW>0) heroFrame(heroRun?dt:0);
+  requestAnimationFrame(heroLoop);
+}
+function heroStatic(){ heroT=6.2; hPackets=[]; for(let i=0;i<40;i++){ const pl=plan('A','joint',Math.round(heroBattery(heroT))); hPackets.push({k:i%3?VI:VO, path: i%3?pl.video.path:pl.voice.path, u:(i*0.137)%1}); } }
+heroToggle.addEventListener('click',()=>{ heroRun=!heroRun; heroToggle.textContent=heroRun?'Pause':'Play'; });
+if (reduce){ heroStatic(); heroToggle.textContent='Play'; }
+
+/* ============ SIMULATOR (SVG) ============ */
+const NS='http://www.w3.org/2000/svg';
+const svg=document.getElementById('simSvg');
+const N={u1:{x:70,y:205},UAV1:{x:290,y:118},UAV2:{x:290,y:292},UAV3:{x:530,y:118},UAV4:{x:530,y:292},GS:{x:730,y:205}};
+const LINKS_A=[['u1','UAV1'],['u1','UAV2'],['UAV1','UAV3'],['UAV1','UAV4'],['UAV2','UAV3'],['UAV2','UAV4'],['UAV3','GS'],['UAV4','GS']];
+const CURVE={x:300,y:-22}; // control point for u1-UAV3 (scenario B)
+const S={scn:'A', pl:'joint', b:90, playing:false};
+const PL={A:[['frozen','Frozen plan'],['greedy','Replan · greedy, adaptive'],['greedyguard','Replan · greedy + guard, adaptive'],['joint','Replan · joint + guard, adaptive (our choice)']],
+          B:[['frozen','Frozen plan'],['fixed','Replan · fixed weights'],['adaptive','Replan · adaptive weights (our choice)']]};
+function el(n,a,p){const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); (p||svg).appendChild(e); return e;}
+function isCurve(a,b){return S.scn==='B' && ((a==='u1'&&b==='UAV3')||(a==='UAV3'&&b==='u1'));}
+function segPt(a,b,f){
+  const p=N[a],q=N[b];
+  if (isCurve(a,b)){ const s=a==='u1'?p:q, e=a==='u1'?q:p, ff=a==='u1'?f:1-f; const u=1-ff;
+    return {x:u*u*s.x+2*u*ff*CURVE.x+ff*ff*e.x, y:u*u*s.y+2*u*ff*CURVE.y+ff*ff*e.y}; }
+  return {x:p.x+(q.x-p.x)*f, y:p.y+(q.y-p.y)*f};
+}
+function pathD(path){
+  let d=`M${N[path[0]].x},${N[path[0]].y}`;
+  for(let i=1;i<path.length;i++){ const a=path[i-1],b=path[i];
+    if (isCurve(a,b)) d+=` Q${CURVE.x},${CURVE.y} ${N[b].x},${N[b].y}`; else d+=` L${N[b].x},${N[b].y}`; }
+  return d;
+}
+let gLinks,gRoutes,gPk,gNodes, nodeEls={};
+function buildSim(){
+  svg.innerHTML='';
+  gLinks=el('g'); gRoutes=el('g'); gPk=el('g'); gNodes=el('g');
+  const links = LINKS_A.slice(); if (S.scn==='B') links.push(['u1','UAV3']);
+  links.forEach(([a,b])=>{
+    el('path',{d:pathD([a,b]),fill:'none',stroke:'var(--link)','stroke-width':isCurve(a,b)?1.6:1.4,'stroke-dasharray':isCurve(a,b)?'2 5':'5 6'},gLinks);
+  });
+  if (S.scn==='B'){ const t=el('text',{x:300,y:44,'text-anchor':'middle',class:'n-sub'},gLinks); t.textContent='extra link u1–UAV3 (B)'; }
+  nodeEls={};
+  Object.keys(N).forEach(k=>{
+    const n=N[k], g=el('g',{},gNodes);
+    if (k.startsWith('UAV')){
+      el('rect',{x:n.x-46,y:n.y-30,width:92,height:60,rx:12,fill:'var(--surface)',stroke:'var(--line)','stroke-width':1.5},g);
+      const t=el('text',{x:n.x,y:n.y-10,'text-anchor':'middle',class:'n-label'},g); t.textContent=k;
+      el('rect',{x:n.x-32,y:n.y-1,width:64,height:7,rx:2,fill:'var(--surface-2)'},g);
+      const bf=el('rect',{x:n.x-32,y:n.y-1,width:64,height:7,rx:2,fill:'var(--ok)'},g);
+      const bt=el('text',{x:n.x,y:n.y+20,'text-anchor':'middle',class:'n-sub'},g);
+      const load=el('text',{x:n.x,y:n.y+48,'text-anchor':'middle',class:'n-sub'},g);
+      const x=el('path',{d:`M${n.x-40},${n.y-24} L${n.x+40},${n.y+24} M${n.x+40},${n.y-24} L${n.x-40},${n.y+24}`,stroke:'var(--bad)','stroke-width':3,opacity:0},g);
+      nodeEls[k]={box:g.firstChild,bf,bt,load,x};
+    } else {
+      el('circle',{cx:n.x,cy:n.y,r:30,fill:'var(--surface-2)',stroke:'var(--line)','stroke-width':1.5},g);
+      const t=el('text',{x:n.x,y:n.y+4,'text-anchor':'middle',class:'n-label'},g); t.textContent=k;
+      const s=el('text',{x:n.x,y:n.y+48,'text-anchor':'middle',class:'n-sub'},g); s.textContent= k==='u1'?'rescue team':'ground station';
+    }
+  });
+  rVoice=el('path',{fill:'none',stroke:'var(--voice)','stroke-width':4,'stroke-linecap':'round','stroke-linejoin':'round',opacity:.45},gRoutes);
+  rVideo=el('path',{fill:'none',stroke:'var(--video)','stroke-width':7,'stroke-linecap':'round','stroke-linejoin':'round',opacity:.35},gRoutes);
+  gRoutes.appendChild(rVoice);
+  pk=[]; spV=0; spD=0;
+}
+let rVoice,rVideo,pk=[],spV=0,spD=0,cur=null;
+const OTHER={UAV2:50,UAV3:80,UAV4:60};
+function render(){
+  cur=plan(S.scn,S.pl,S.b);
+  rVoice.setAttribute('d',pathD(cur.voice.path));
+  rVideo.setAttribute('d',pathD(cur.video.path));
+  rVideo.setAttribute('stroke-width', cur.video.profile==='reduced'?4.5:7);
+  const load={UAV1:0,UAV2:0,UAV3:0,UAV4:0};
+  cur.voice.path.forEach(n=>{ if(n in load) load[n]+=1.3; });
+  cur.video.path.forEach(n=>{ if(n in load) load[n]+= cur.video.profile==='reduced'?3.6:4.4; });
+  Object.keys(nodeEls).forEach(k=>{
+    const e=nodeEls[k], b= k==='UAV1'?S.b:OTHER[k];
+    e.bf.setAttribute('width',64*b/100);
+    e.bf.setAttribute('fill', b<20?'var(--bad)':b<30?'var(--warn)':'var(--ok)');
+    e.bt.textContent = (k==='UAV1'&&S.b<=0)?'down':'battery '+b+'%';
+    e.load.textContent = 'load '+load[k].toFixed(1)+' / 4.9 Mbit/s';
+    e.x.setAttribute('opacity', (k==='UAV1'&&S.b<=0)?1:0);
+    e.box.setAttribute('stroke', (k==='UAV1'&&S.b<20&&S.b>0)?'var(--bad)':'var(--line)');
+  });
+  const fmt=p=>p.join(' → ');
+  document.getElementById('routes').innerHTML =
+    `<div><span class="t v">Voice</span><span>${fmt(cur.voice.path)}${cur.voice.lost?' · <b style="color:var(--bad)">lost</b>':' · 1.3 Mbit/s'}</span></div>`+
+    `<div><span class="t d">Video</span><span>${fmt(cur.video.path)}${cur.video.lost?' · <b style="color:var(--bad)">lost</b>':(cur.video.profile==='reduced'?' · reduced 3.6 Mbit/s':' · full 4.4 Mbit/s')}</span></div>`;
+  document.getElementById('explain').textContent=cur.note;
+  document.getElementById('evidence').textContent=cur.evid;
+  document.getElementById('battOut').textContent= S.b<=0?'down':S.b+'%';
+  document.getElementById('stateTag').textContent= S.b<=0?'UAV1 failed': S.b<20?'UAV1 excluded (<20%)': S.b<=30?'UAV1 weak':'';
+}
+function setSeg(){
+  const sc=document.getElementById('scnSeg'); sc.innerHTML='';
+  [['A','Scenario A'],['B','Scenario B (+ link u1–UAV3)']].forEach(([k,t])=>{
+    const b=document.createElement('button'); b.type='button'; b.textContent=t; b.setAttribute('aria-pressed',S.scn===k);
+    b.onclick=()=>{ S.scn=k; S.pl= k==='A'?'joint':'adaptive'; setSeg(); buildSim(); render(); }; sc.appendChild(b);
+  });
+  const ps=document.getElementById('plSeg'); ps.innerHTML='';
+  PL[S.scn].forEach(([k,t])=>{
+    const b=document.createElement('button'); b.type='button'; b.textContent=t; b.setAttribute('aria-pressed',S.pl===k);
+    b.onclick=()=>{ S.pl=k; setSeg(); pk=[]; render(); }; ps.appendChild(b);
+  });
+}
+const batt=document.getElementById('batt'), playBtn=document.getElementById('playBtn');
+batt.addEventListener('input',()=>{ S.b=+batt.value; render(); });
+let playAcc=0;
+playBtn.addEventListener('click',()=>{
+  if (S.playing){ S.playing=false; playBtn.textContent='Play discharge'; return; }
+  if (S.b<=0){ S.b=90; batt.value=90; pk=[]; render(); }
+  S.playing=true; playBtn.textContent='Pause';
+});
+function simTick(dt){
+  if (!cur) return;
+  if (S.playing){
+    playAcc+=dt;
+    const step = (S.b<=31 && S.b>=18) ? 0.42 : 0.12; // slow down near the decisions
+    while(playAcc>step){ playAcc-=step; S.b=Math.max(0,S.b-1); batt.value=S.b; render();
+      if (S.b<=0){ S.playing=false; playBtn.textContent='Restart'; break; } }
+  }
+  spV+=dt; spD+=dt;
+  while(spV>0.22){ spV-=0.22; pk.push({k:VO,path:cur.voice.path,lost:cur.voice.lost,u:0,e:null}); }
+  const dg = cur.video.profile==='reduced'?0.16:0.12;
+  while(spD>dg){ spD-=dg; pk.push({k:VI,path:cur.video.path,lost:cur.video.lost,u:0,e:null}); }
+  pk.forEach(p=>{
+    p.u+=dt*0.24;
+    if (!p.e){ p.e=el(p.k===VO?'circle':'rect', p.k===VO?{r:4.5,fill:'var(--voice)'}:{width:11,height:7,rx:2,fill:'var(--video)'},gPk); }
+    const n=p.path.length-1; let u=p.u;
+    if (p.lost){ const iU=p.path.indexOf('UAV1')/n; if (u>=iU){ p.dead=true; } }
+    const seg=Math.min(n-1,Math.floor(u*n)), f=u*n-seg, q=segPt(p.path[seg],p.path[seg+1],f);
+    if (p.k===VO){ p.e.setAttribute('cx',q.x); p.e.setAttribute('cy',q.y); } else { p.e.setAttribute('x',q.x-5.5); p.e.setAttribute('y',q.y-3.5); }
+  });
+  pk=pk.filter(p=>{ if (p.u>=1||p.dead){ p.e&&p.e.remove(); return false;} return true; });
+}
+
+/* ============ STATIC CHARTS ============ */
+function drawMap(){
+  const m=document.getElementById('mapSvg'); m.innerHTML='';
+  const x0=300, x1=830, bx=b=>x0+(30-b)*(x1-x0)/15; // 30% -> 15%
+  const mk=(n,a,p)=>{const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); (p||m).appendChild(e); return e;};
+  const band=mk('rect',{x:bx(19.5),y:20,width:x1-bx(19.5),height:290,fill:'var(--surface-2)'});
+  const ex=mk('text',{x:bx(17.25),y:34,'text-anchor':'middle'}); ex.textContent='UAV1 excluded (<20%)';
+  const grid=[]; for(let b=30;b>=15;b-=2){ grid.push(mk('line',{x1:bx(b),x2:bx(b),y1:20,y2:300,stroke:'var(--line)'})); const t=mk('text',{x:bx(b),y:14,'text-anchor':'middle'}); t.textContent=b+'%'; }
+  const rows=[
+    ['A','Greedy · fixed',[[19,'cap']]],
+    ['A','Greedy · adaptive',[[25,'bad'],[19,'cap']]],
+    ['A','Greedy + guard · fixed',[[19,'cap']]],
+    ['A','Greedy + guard · adaptive',[[25,'cap']]],
+    ['A','Joint + guard · fixed',[[19,'cap']]],
+    ['A','Joint + guard · adaptive',[[19,'cap']]],
+    ['B','All planners · fixed weights',[[19,'ok']]],
+    ['B','All planners · adaptive weights',[[26,'ok']]],
+  ];
+  let y=44;
+  rows.forEach((r,i)=>{
+    if (i===0||rows[i-1][0]!==r[0]){ const h=mk('text',{x:8,y:y-2,class:'lab2','font-weight':'700'}); h.textContent='Scenario '+r[0]; y+=18; }
+    const t=mk('text',{x:24,y:y+4,class:'lab2'}); t.textContent=r[1];
+    mk('line',{x1:x0,x2:x1,y1:y,y2:y,stroke:'var(--line)','stroke-dasharray':'2 4'});
+    r[2].forEach(([b,k])=>{
+      const cx=bx(b);
+      if (k==='cap') mk('path',{d:`M${cx},${y-7} L${cx+7},${y} L${cx},${y+7} L${cx-7},${y} Z`,fill:'var(--video)'});
+      else if (k==='bad') mk('path',{d:`M${cx-6},${y-6} L${cx+6},${y+6} M${cx+6},${y-6} L${cx-6},${y+6}`,stroke:'var(--bad)','stroke-width':3});
+      else mk('circle',{cx,cy:y,r:6.5,fill:'var(--ink)'});
+    });
+    y+=28;
+  });
+  band.setAttribute('height',y-30); grid.forEach(g=>g.setAttribute('y2',y-10));
+  // legend
+  let lx=24; const ly=y+12;
+  [['ok','video leaves UAV1, full profile kept'],['cap','flows leave UAV1, video reduced'],['bad','video moves onto weak UAV1']].forEach(([k,txt])=>{
+    if (k==='cap') mk('path',{d:`M${lx},${ly-6} L${lx+6},${ly} L${lx},${ly+6} L${lx-6},${ly} Z`,fill:'var(--video)'});
+    else if (k==='bad') mk('path',{d:`M${lx-5},${ly-5} L${lx+5},${ly+5} M${lx+5},${ly-5} L${lx-5},${ly+5}`,stroke:'var(--bad)','stroke-width':2.6});
+    else mk('circle',{cx:lx,cy:ly,r:5.5,fill:'var(--ink)'});
+    const t=mk('text',{x:lx+12,y:ly+4,class:'lab2'}); t.textContent=txt; lx+= txt.length*6.4+48;
+  });
+  m.setAttribute('viewBox',`0 0 860 ${ly+18}`);
+}
+function drawZone(){
+  const z=document.getElementById('zoneSvg'); z.innerHTML='';
+  const mk=(n,a)=>{const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); z.appendChild(e); return e;};
+  const x0=150,x1=820, bx=b=>x0+(28-b)*(x1-x0)/5.2; // 28% -> 22.8%
+  for(let b=28;b>=23;b--){ mk('line',{x1:bx(b),x2:bx(b),y1:18,y2:128,stroke:'var(--line)'}); const t=mk('text',{x:bx(b),y:146,'text-anchor':'middle'}); t.textContent=b+'%'; }
+  const cap=mk('text',{x:(x0+x1)/2,y:164,'text-anchor':'middle'}); cap.textContent='UAV1 estimated battery (falls to the right)';
+  // fixed row
+  const y1=48, y2=100;
+  let t=mk('text',{x:8,y:y1+4,class:'lab2','font-weight':'700'}); t.textContent='Fixed weights';
+  t=mk('text',{x:8,y:y2+4,class:'lab2','font-weight':'700'}); t.textContent='Adaptive weights';
+  mk('line',{x1:bx(28),x2:bx(23.446),y1:y1,y2:y1,stroke:'var(--video)','stroke-width':6,'stroke-linecap':'round'});
+  t=mk('text',{x:bx(25.7),y:y1-12,'text-anchor':'middle',class:'lab2'}); t.textContent='video on UAV1 → UAV4 the whole time';
+  mk('line',{x1:bx(28),x2:bx(25.776),y1:y2,y2:y2,stroke:'var(--video)','stroke-width':6,'stroke-linecap':'round'});
+  mk('line',{x1:bx(25.776),x2:bx(23.352),y1:y2,y2:y2,stroke:'var(--video)','stroke-width':6,'stroke-linecap':'round','stroke-dasharray':'1 9'});
+  mk('line',{x1:bx(25.776),x2:bx(25.776),y1:y2-16,y2:y2+16,stroke:'var(--ink)','stroke-width':2});
+  t=mk('text',{x:bx(26.9),y:y2-12,'text-anchor':'middle',class:'lab2'}); t.textContent='on UAV1';
+  t=mk('text',{x:bx(24.6),y:y2-12,'text-anchor':'middle',class:'lab2'}); t.textContent='on UAV2 → UAV4';
+  t=mk('text',{x:bx(25.776),y:y2+30,'text-anchor':'middle',class:'lab2','font-weight':'700'}); t.textContent='switch 25.776%';
+  [[23.446,y1],[23.352,y2]].forEach(([b,y])=>{ mk('circle',{cx:bx(b),cy:y,r:5,fill:'var(--ink)'}); const e=mk('text',{x:bx(b)+10,y:y+4}); e.textContent='end '+b+'%'; });
+}
+function drawStatus(){
+  const items=[
+    ['Emulator: Open vSwitch, four UAV relays, Docker image','done'],
+    ['Route planner: score, weights, joint planning, guard','done'],
+    ['Safe route updates, meters, priority queues','done'],
+    ['Failure protection with traffic, scenario A','pilot'],
+    ['Probe checks in A and B','done'],
+    ['Offline decision map','done'],
+    ['Fixed vs adaptive weights with traffic','pilot'],
+    ['Estimated energy model and battery feedback','done'],
+    ['Zone30 guard and zoneB01 traffic pair','pilot'],
+    ['Measurement protocol v2','planned'],
+    ['5G connection without a full core (Option 2)','proposed'],
+    ['Clean traffic sender / timing','notyet'],
+    ['QoS targets met (loss, delay)','notyet'],
+    ['Energy saving or longer flight time','notyet'],
+    ['Recruiting a reserve UAV','notyet'],
+    ['Real 5G core (Open5GS + UERANSIM)','notyet'],
+  ];
+  const lab={done:'Done',pilot:'Done · pilot',planned:'Planned',proposed:'Proposed',notyet:'Not yet'};
+  document.getElementById('status').innerHTML = items.map(([t,k])=>`<div><span>${t}</span><span class="chip ${k}">${lab[k]}</span></div>`).join('');
+}
+function drawStatic(){ drawMap(); drawZone(); }
+
+/* ============ LIVE MODE (only when served from the lab VM) ============ */
+const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+if (local){
+  fetch('/api/state',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).then(st=>{
+    document.getElementById('mode').classList.add('live');
+    document.getElementById('modeText').textContent='Live · lab VM via SSH tunnel';
+    if (st && st.scenario){ S.scn=st.scenario; S.pl= st.planner || (S.scn==='A'?'joint':'adaptive'); }
+    if (st && st.batteries && typeof st.batteries.UAV1==='number'){ S.b=Math.round(st.batteries.UAV1*100); batt.value=S.b; }
+    setSeg(); buildSim(); render();
+  }).catch(()=>{});
+}
+
+/* ============ BOOT ============ */
+drawStatic(); setSeg(); buildSim(); render();
+function resize(){ sizeHero(); }
+new ResizeObserver(resize).observe(hero); resize();
+let simLast=0;
+function simLoop(ts){ const dt= simLast? Math.min(0.05,(ts-simLast)/1000):0; simLast=ts; if(!reduce||S.playing) simTick(dt); requestAnimationFrame(simLoop); }
+if (reduce){ for(let i=0;i<40;i++) simTick(0.1); }
+requestAnimationFrame(heroLoop); requestAnimationFrame(simLoop);
+})();
+</script>
+</body>
+</html>
