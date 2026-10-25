@@ -141,6 +141,38 @@ python3 sim/guard_zone_report.py results/guard-zone-feedback-trials/<fixed-run> 
 Use `--kind functional` for a quick probe check instead of real UDP traffic.
 
 ---
+### Open the results page from the VM (SSH tunnel)
+
+We tested opening the results page from Windows through an SSH tunnel
+to the Ubuntu VM. This shows the static results page.
+It does not read live controller or battery state.
+
+In the Ubuntu VM:
+
+```bash
+python3 -m http.server 8080 \
+  --bind 127.0.0.1 \
+  --directory "$HOME/green-fanet-multihop/docs"
+```
+
+The web server listens only on the VM's loopback address.
+
+On Windows, open PowerShell. Our VirtualBox NAT rule forwards
+host port 2022 to guest port 22:
+
+```powershell
+ssh -N -p 2022 -L 127.0.0.1:8080:127.0.0.1:8080 rama@127.0.0.1
+```
+
+Enter the Ubuntu user's password and keep both terminals open.
+If your SSH port or username is different, change those values.
+
+Open http://127.0.0.1:8080 in the Windows browser.
+
+To stop, press Ctrl+C in PowerShell to close the tunnel,
+then Ctrl+C in the Ubuntu terminal to stop the web server.
+This does not stop the public GitHub Pages website.
+---
 
 ## Experiments
 
