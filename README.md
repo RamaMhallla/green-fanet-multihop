@@ -64,7 +64,7 @@ Experiment output is written to `results/`. This folder is **not** in the reposi
 
 ## Reading order
 
-### Short path (about 15 minutes)
+### Short path
 
 1. This README
 2. [`config/params.py`](config/params.py): drones, links, rates, delays
