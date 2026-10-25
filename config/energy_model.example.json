@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "model": "uav-energy-accounting-v1",
+  "status": "ILLUSTRATIVE",
+  "provenance": "Teaching/sensitivity values chosen for this package, NOT measured hardware values and NOT numerical values taken from Zeng et al. or ns-3. Replace with documented, device-specific assumptions before a scientific energy claim.",
+  "assumptions": {
+    "all_uavs_hovering": true,
+    "all_radios_powered": true,
+    "automatic_sleep": false,
+    "battery_feedback": false
+  },
+  "uavs": {
+    "UAV1": {"hover_w": 150.0, "platform_w": 5.0, "radio_idle_w": 1.0, "tx_increment_j_per_bit": 0.00000005, "rx_increment_j_per_bit": 0.00000005},
+    "UAV2": {"hover_w": 150.0, "platform_w": 5.0, "radio_idle_w": 1.0, "tx_increment_j_per_bit": 0.00000005, "rx_increment_j_per_bit": 0.00000005},
+    "UAV3": {"hover_w": 150.0, "platform_w": 5.0, "radio_idle_w": 1.0, "tx_increment_j_per_bit": 0.00000005, "rx_increment_j_per_bit": 0.00000005},
+    "UAV4": {"hover_w": 150.0, "platform_w": 5.0, "radio_idle_w": 1.0, "tx_increment_j_per_bit": 0.00000005, "rx_increment_j_per_bit": 0.00000005}
+  }
+}

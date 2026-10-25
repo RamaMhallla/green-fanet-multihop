@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "model": "composite-reference-hover-radio-v1",
+  "status": "REFERENCE_DERIVED_COMPOSITE",
+  "description": "DJI Matrice 100 / TB47D reference with 500 g payload, plus a separately modelled Intel 5300 radio. Not a measured assembled UAV or a 5G NR radio.",
+  "assumptions": {
+    "all_uavs_hovering": true,
+    "extra_radio_powered": true,
+    "automatic_landing": false,
+    "battery_feedback": true,
+    "linear_state_of_charge": true,
+    "time_acceleration": 1.0
+  },
+  "sources": [
+    {
+      "title": "DJI Matrice 100 specifications, standard TB47D battery",
+      "url": "https://www.dji.com/support/product/matrice100",
+      "used_for": "Published 99.9 Wh, 4500 mAh, 22.2 V, 17 min hover with 500 g payload."
+    },
+    {
+      "title": "DJI Matrice 100 User Manual V1.0, printed pages 69-71 (DJI-authored mirrored manual)",
+      "url": "https://manuals.plus/m/d9fe4c2e7336fe5fcbcedf78b1600286992cce3aa842e0b124ae99b8b654788f.pdf",
+      "used_for": "Hover-time conditions: no wind, 10 m above sea level, landing at 10% battery."
+    },
+    {
+      "title": "D. Halperin, B. Greenstein, A. Sheth, D. Wetherall, Demystifying 802.11n Power Consumption, HotPower 2010, Table 3",
+      "url": "https://www.usenix.org/legacy/events/hotpower/tech/full_papers/Halperin.pdf",
+      "used_for": "Intel 5300 measured state powers: idle 0.82 W, single-stream TX 1.28 W, one-antenna SISO RX 0.94 W. Paper considers per-stream rates 6.5-65 Mbps."
+    }
+  ],
+  "derivation": {
+    "battery_j": "99.9 Wh * 3600 = 359640 J nominal full capacity",
+    "aircraft_baseline_w": "Assume linear usable nominal energy: 0.90 * 359640 / (17 * 60) = 317.32941176470587 W. Effective aircraft baseline includes original onboard electronics; not pure propulsion.",
+    "payload": "500 g is the selected reference loading condition, not our measured computer/radio payload mass or power.",
+    "extra_radio": "Hypothetical additional NIC. Its 0.82 W is added to the aircraft baseline; do not add a second platform/hover term. No host-computer power increment is provided by these sources.",
+    "phy_rate": "65e6 bit/s is a selected reference mode, not a measured link rate and not the tc 5 Mbps shaper.",
+    "incremental_coefficients": "TX=(1.28-0.82)/65e6 J/bit; RX=(0.94-0.82)/65e6 J/bit. Idle is charged once. Serialization-only workload proxy: no wireless preamble/ACK/retry/contention accounting.",
+    "battery_fraction": "f(t)=max(0, f(0)-E_used(t)/C_nominal). State of charge is a linear model, not battery telemetry."
+  },
+  "uavs": {
+    "UAV1": {
+      "battery_capacity_j": 359640.0,
+      "aircraft_baseline_w": 317.32941176470587,
+      "radio_idle_w": 0.82,
+      "radio_tx_w": 1.28,
+      "radio_rx_w": 0.94,
+      "reference_phy_rate_bps": 65000000.0
+    },
+    "UAV2": {
+      "battery_capacity_j": 359640.0,
+      "aircraft_baseline_w": 317.32941176470587,
+      "radio_idle_w": 0.82,
+      "radio_tx_w": 1.28,
+      "radio_rx_w": 0.94,
+      "reference_phy_rate_bps": 65000000.0
+    },
+    "UAV3": {
+      "battery_capacity_j": 359640.0,
+      "aircraft_baseline_w": 317.32941176470587,
+      "radio_idle_w": 0.82,
+      "radio_tx_w": 1.28,
+      "radio_rx_w": 0.94,
+      "reference_phy_rate_bps": 65000000.0
+    },
+    "UAV4": {
+      "battery_capacity_j": 359640.0,
+      "aircraft_baseline_w": 317.32941176470587,
+      "radio_idle_w": 0.82,
+      "radio_tx_w": 1.28,
+      "radio_rx_w": 0.94,
+      "reference_phy_rate_bps": 65000000.0
+    }
+  }
+}
