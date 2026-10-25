@@ -2,7 +2,7 @@
 
 These are the sources used in the progress report *Green-Aware SDN Relay Control for a 5G-assisted FANET*
 (Rama Mhalla and Aurelio Benvenuto, Smart and Programmable Networks, UNICAL).
-The numbers [1]–[11] are the same as in the report.
+The numbers [1]–[12] are the same as in the report.
 
 For each source you can see what we took from it and where we use it.
 We say clearly what comes from the source and what is our own choice.
@@ -15,8 +15,12 @@ We say clearly what comes from the source and what is our own choice.
 | `Ref3_Hossain_Sensors2019_highlighted.pdf` | [3] | Open access (CC BY 4.0), highlighted by us |
 
 All the other sources are **links only**. Their licences do not allow us to share copies
-(DJI manual, IEEE paper, ETSI/3GPP specification, USENIX paper), or they are web pages that are
+(DJI manual, IEEE papers [7] and [12], ETSI/3GPP specification, USENIX paper), or they are web pages that are
 easy to open (RFCs, Linux documentation). Please do not add those PDFs to this repository.
+
+For [12] we keep a highlighted study copy **outside** this repository
+(`Ref12_Tropea_DRCN2025_highlighted_PRIVATE.pdf`), because the paper is under IEEE copyright.
+The notes below list everything that is highlighted in it.
 
 ### How to read the highlighted PDFs
 
@@ -48,7 +52,7 @@ Lower is better. The score has no unit.
 |---|---|---|
 | Weighted sum, α + β + γ = 1 | [2] (stability metric, Eq. 1) | Our three terms: delay, battery, carbon |
 | Battery as a fraction of the starting energy (`f_i`) | [2] (willingness, Sec. 4.1.1) | — |
-| Do not use relays with low battery | [2] (WILL_LOW nodes are never relays, threshold 10%) | Our threshold is 20% |
+| Do not use relays with low battery | [2] (WILL_LOW nodes are never relays, threshold 10%) | Our threshold is 20% (our choice), consistent with the 20% route-avoidance threshold in [12, Sec. IV-C and V] |
 | Carbon emission factor per node (`CEF_i`) | [3] (pollution-aware routing) | We **add** CEF as a normalised term; [3] **multiplies** energy by CEF |
 | Path value = sum over intermediate nodes only | [3] (Table 4) | u1 and GS are not counted |
 | Normalising a term by a maximum (`D_i / D_max`) | idea also in [2] (Eq. 7) | — |
@@ -178,3 +182,38 @@ Lower is better. The score has no unit.
 - **What we took:** common practice for DSCP: **EF (46)** for telephony and **AF41 (34)** for multimedia conferencing.
 - **Where we use it:** our voice flow is marked DSCP 46 and our video flow DSCP 34.
 - **Note:** in 5G the DSCP values are operator configuration; RFC 4594 is guidance, not a rule.
+
+## [12] Tropea et al., DRCN 2025 — scenario and recruiting
+
+- **Citation:** M. Tropea, A. R. Masaquiza Caiza, L. M. Samaniego Campoverde, M. G. Spina, F. De Rango,
+  "A Resource-Aware Ant-Based Recruiting Strategy in 5G-assisted FANET Disaster Scenarios,"
+  *21st Int. Conf. on the Design of Reliable Communication Networks (DRCN)*, 2025.
+- **Link:** https://doi.org/10.1109/DRCN65040.2025.11046096
+- **In this repo:** link only (IEEE copyright). A highlighted private copy is kept outside the repository
+  (labels C1–C13).
+- **Role in our project:** background for the scenario and for the proposed recruiting stage.
+  It does **not** validate our routing policy, energy model or results.
+- **What we took:**
+  - **The scenario** (C1–C3): UAVs restore voice and video communication between people in danger and
+    rescue teams, with a multi-hop UAV relay towards the 5G core through a ground station.
+    Our u1 → UAV relays → GS story and the Option 2 transport view follow this.
+  - **The low-battery rule** (C5–C6, Sec. IV-C and V): routes avoid UAVs below a threshold E_th set to 20%
+    of a DJI Matrice battery. Our exclusion threshold is also 20% (our choice, consistent with this paper).
+  - **Metrics for choosing a reserve UAV** (C7, Sec. IV-D): number of hops, energy level, recruiting time,
+    available bandwidth. These factors are useful for our proposed recruiting stage.
+  - **When to recruit and how long it takes** (C9–C10, Sec. IV-D): a recruitment request is sent when energy
+    or bandwidth falls below a threshold (E_thr and B_thr, both 50% in their Table I; this is a different
+    threshold from the 20% route-avoidance E_th). The recruiting time depends on UAV speed and distance.
+    Our report: start at the battery warning and consider the take-off and travel delay.
+  - Supporting points: Wi-Fi links between UAVs (C4) support our Wi-Fi radio energy reference [6];
+    a weighted metric with coefficients that sum to 1 (C8) has the same structure as our route score;
+    MOS, delay, loss and throughput (C13) are useful metrics for our future QoS evaluation.
+- **Where we use it:** Part 3 (20% rule) and Part 13 (recruiting design and meeting question 5).
+- **Difference:**
+  - The paper uses **ant colony optimization**, distributed in every UAV (C11). We could investigate
+    **GWO** as another search method, with a central SDN controller. We have not implemented or compared
+    the two methods; with only a few reserve candidates, all options can be compared directly.
+  - The paper **simulates** with OMNeT++, INET and Simu5G (C12). We **emulate** with real packets, queues and
+    interface counters in Containernet, and we do not simulate the 5G radio.
+  - Recruiting is **not implemented** in our project yet; it is a design idea in the report.
+
